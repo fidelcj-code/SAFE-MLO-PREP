@@ -1,0 +1,13 @@
+{
+  "name": "safe-mlo-master",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A zero-dependency, GitHub-Pages-ready SAFE MLO study application",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check lib/app.js && node --check lib/engine.js && node --check lib/store.js && node --check data/questions.js"
+  },
+  "engines": { "node": ">=20" }
+}
