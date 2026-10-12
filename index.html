@@ -263,6 +263,35 @@ table.secs td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;whit
 .stylebar{margin:1.4rem 0 .2rem;padding:1rem 1.1rem;border:1px solid var(--line);border-radius:var(--cut);background:var(--sheet)}
 .stylebar .chips{margin:.55rem 0 0}
 .stylebar .fine{margin-top:.6rem;max-width:none}
+.a5set .eyebrow.sub{margin-top:.9rem;font-size:.8rem;color:var(--ink-2)}
+.a5list{display:grid;gap:1.6rem;justify-items:center}
+/* an A5 page is 148 x 210 mm; the page holds `rows` written lines plus a blank line at top and bottom */
+.a5wrap{width:100%;max-width:440px;container-type:inline-size;--rows:30;--f:3.75cqw}
+.rows-35 .a5wrap{--rows:35} .rows-40 .a5wrap{--rows:40}
+.hand-s .a5wrap{--f:3.3cqw} .hand-l .a5wrap{--f:4.2cqw}
+.a5wrap{--lh:calc(100cqw * 210 / 148 / (var(--rows) + 2))}
+.a5bar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;font-size:.86rem;color:var(--ink-2);margin-bottom:.45rem}
+.a5bar .mark{font-weight:700;font-size:1.05rem}
+.a5wrap.ok .a5bar .mark{color:var(--green)} .a5wrap.miss .a5bar .mark{color:var(--red)}
+.a5bar .fit{margin-left:auto;font-family:var(--mono);font-size:.74rem;letter-spacing:.03em;color:var(--accent)}
+.a5wrap.over .a5bar .fit{color:var(--amber)}
+.a5page{position:relative;min-height:calc(100cqw * 210 / 148);padding:var(--lh) 5cqw;border:1px solid var(--line);border-radius:4px;
+  background-color:var(--sheet);
+  background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--lh) - 1px),rgba(151,165,186,.16) calc(var(--lh) - 1px),rgba(151,165,186,.16) var(--lh));
+  background-position:0 var(--lh);box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.a5in{font-size:min(var(--f),calc(var(--lh) * .86));line-height:var(--lh);color:var(--ink);overflow-wrap:anywhere;position:relative;z-index:1}
+.a5in p,.a5in ul,.a5in li,.a5in div{margin:0;padding:0}
+.a5in ul{list-style:none}
+.a5in li{padding-left:1.6em;text-indent:-1.6em}
+.a5in b{font-family:var(--display);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.a5in li b{color:var(--ink-2);text-transform:none;letter-spacing:0}
+.a5in li.yours{color:var(--red)} .a5in em{font-style:normal;font-weight:700}
+.a5in .a5h{color:var(--ink-2);font-family:var(--display);letter-spacing:.06em;text-transform:uppercase}
+.a5page .mk{position:absolute;left:0;right:0;height:0;border-top:1px dashed;pointer-events:none}
+.a5page .mk span{position:absolute;right:.4rem;top:-1.25em;font-family:var(--mono);font-style:normal;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase}
+.a5page .half{top:calc(var(--lh) * (1 + var(--rows) / 2));border-color:rgba(255,92,173,.55);color:var(--a2)}
+.a5page .end{top:calc(var(--lh) * (var(--rows) + 1));border-color:rgba(255,193,77,.6);color:var(--amber)}
+.a5wrap .row{margin-top:.6rem}
 .srcline{display:flex;flex-wrap:wrap;align-items:baseline;gap:.25rem .6rem;font-size:.86rem;color:var(--ink-2);border-top:1px dashed var(--line);padding-top:.6rem;overflow-wrap:anywhere}
 .srcline .lab{font-size:.84rem;color:var(--ink-2);margin-right:0}
 .srcline .chk{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--green);border:1px solid var(--green);border-radius:999px;padding:.08rem .5rem;white-space:nowrap}
@@ -816,6 +845,7 @@ function render(){
   if(view.name === 'exam') app.innerHTML = vExam();
   else if(view.name === 'results') app.innerHTML = vResults();
   else app.innerHTML = vHome();
+  if(view.name === 'home' && view.tab === 'notes' && A5.on) fitA5();
 }
 function inProgress(){
   if(state.drill.cur) return 'drill';
@@ -955,7 +985,48 @@ function vHome(){
     tabs()+body+
     '<div class="foot"><p id="syncnote">'+h(syncNote())+'</p><p>These questions were written for practice. They are not actual NMLS questions, and no licensed expert has reviewed them. Each rule shows its source; a source marked Checked was read against the regulation or agency text in October 2026, and the others are cited from knowledge of the source. Topic weights follow the NMLS National Test Content Outline. Where a rule here disagrees with PrepXL, trust PrepXL.</p></div></div>';
 }
+/* ---------- A5 view: each entry drawn on a ruled A5 page, only what goes into the notebook ---------- */
+var A5 = {on:true, hand:'m', rows:30};
+(function(){ var c = lsGet(KEY+'a5'); if(c && typeof c === 'object'){ if(typeof c.on === 'boolean') A5.on = c.on; if(c.hand === 's' || c.hand === 'm' || c.hand === 'l') A5.hand = c.hand; if(c.rows === 30 || c.rows === 35 || c.rows === 40) A5.rows = c.rows; } })();
+function a5Save(){ lsSet(KEY+'a5', A5); }
+function a5Row(label, text){ return '<p><b>'+label+'</b> '+h(text)+'</p>'; }
+function a5Card(it, mine, ok, ts, k, written){
+  var wrong = it.o.map(function(o,j){
+    if(j === it.a) return '';
+    return '<li'+(j === mine ? ' class="yours"' : '')+'><b>'+LET[j]+'.</b> '+h(it.w[j])+(j === mine ? ' <em>Your pick.</em>' : '')+'</li>';
+  }).join('');
+  return '<article class="a5wrap '+(ok ? 'ok' : 'miss')+'"><div class="a5bar"><span class="mark">'+(ok ? '&#10003;' : '&#10007;')+'</span><span>'+h(fmtD(ts))+'</span>'+
+    '<span class="fit" data-fit></span></div>'+
+    '<div class="a5page"><div class="a5in">'+
+      '<p class="a5h">'+h(it.c+' '+TOP[it.c].name)+'</p>'+
+      a5Row('Question', it.p)+a5Row('Answer', LET[it.a]+'. '+it.o[it.a])+a5Row('Rule', it.e)+
+      '<div class="a5w"><b>Wrong</b><ul>'+wrong+'</ul></div>'+
+      a5Row('Trigger', it.g.join(' '))+a5Row('Memory', it.m.join(' '))+(it.src ? a5Row('Source', it.src) : '')+
+    '</div><i class="mk half"><span>Half page</span></i><i class="mk end"><span>End of page</span></i></div>'+
+    '<div class="row"><button class="btn sm'+(written ? '' : ' primary')+'" data-act="written" data-k="'+k+'">'+(written ? 'Not written yet' : 'I wrote this one down')+'</button></div></article>';
+}
+/* count the lines each page actually takes on screen, so the label matches the drawing */
+function fitA5(){
+  var cards = app.querySelectorAll('.a5wrap'), half = Math.floor(A5.rows/2);
+  for(var i=0;i<cards.length;i++){
+    var inn = cards[i].querySelector('.a5in'), lh = parseFloat(getComputedStyle(inn).lineHeight) || 1;
+    var n = Math.max(1, Math.round(inn.scrollHeight / lh)), t;
+    t = n <= half ? 'Fits on half a page' : n <= A5.rows ? 'Takes one full page' : 'Runs onto '+Math.ceil(n / A5.rows)+' pages';
+    cards[i].querySelector('[data-fit]').textContent = t+', about '+n+' lines';
+    cards[i].classList.toggle('over', n > A5.rows);
+  }
+}
 /* every answered question, right or wrong, laid out the way it goes into the paper notebook */
+function a5Bar(){
+  function c(act, key, val, label, on){ return '<button class="chip" data-act="'+act+'" data-'+key+'="'+val+'" aria-pressed="'+on+'">'+label+'</button>'; }
+  var out = '<div class="stylebar a5set"><p class="eyebrow">Notes view</p><div class="chips">'+c('a5', 'v', 'a5', 'A5 page', A5.on)+c('a5', 'v', 'screen', 'Screen', !A5.on)+'</div>';
+  if(A5.on){
+    out += '<p class="eyebrow sub">Your handwriting</p><div class="chips">'+c('a5hand', 'v', 's', 'Small', A5.hand === 's')+c('a5hand', 'v', 'm', 'Medium', A5.hand === 'm')+c('a5hand', 'v', 'l', 'Large', A5.hand === 'l')+'</div>'+
+           '<p class="eyebrow sub">Lines on your page</p><div class="chips">'+c('a5rows', 'v', '30', '30', A5.rows === 30)+c('a5rows', 'v', '35', '35', A5.rows === 35)+c('a5rows', 'v', '40', '40', A5.rows === 40)+'</div>'+
+           '<p class="fine">Each card is an A5 page showing only what you copy. Set these once: count the lines on your page, then copy one entry and pick the handwriting size that makes its card take about the same number of lines.</p>';
+  }
+  return out + '</div>';
+}
 function vNotes(){
   var N = state.notes.items, f = view.nf || 'todo', lim = view.nshow || 10, todo = 0, shown = 0, more = false, rows = [], i;
   for(i=0;i<N.length;i++) if(!N[i][3]) todo++;
@@ -965,6 +1036,7 @@ function vNotes(){
     if(shown >= lim){ more = true; break; }
     shown++;
     var it = build(n[0]), ok = n[1] === it.a, mine = n[1];
+    if(A5.on){ rows.push(a5Card(it, mine, ok, n[2], i, n[3])); continue; }
     var os = it.o.map(function(o,j){ return '<li class="'+(j === it.a ? 'correct' : j === mine ? 'yours' : '')+'"><b>'+LET[j]+'</b><span>'+h(o)+'</span></li>'; }).join('');
     rows.push('<article class="entry '+(ok ? 'ok' : 'miss')+'"><div class="margin"><span class="mark">'+(ok ? '&#10003;' : '&#10007;')+'</span><span class="qn">'+h(fmtD(n[2]))+'</span></div><div class="body">'+
       '<p class="meta">'+(ok ? 'You got this one right.' : 'You chose '+LET[mine]+'.')+'</p><p>'+h(it.q)+'</p><ol class="ropts">'+os+'</ol>'+parts(it, mine)+
@@ -974,8 +1046,9 @@ function vNotes(){
   var empty = !N.length ? 'Nothing here yet. Finish a practice test or an exam and every question you answered shows up, right or wrong.'
             : f === 'todo' ? 'All caught up. Every entry is written down.' : 'Nothing marked as written yet.';
   return '<div class="sech"><h2>Notes</h2><p>Every question you answer lands here, right or wrong, laid out the way you write it: Question, Answer, Rule, Wrong, Trigger, Memory. The Source line under each entry says where the rule comes from. Tick each one off as you copy it into your notebook.</p></div>'+
+    a5Bar()+
     '<div class="chips">'+chip('todo','To write ('+todo+')')+chip('done','Written ('+(N.length - todo)+')')+chip('all','All '+N.length)+'</div>'+
-    '<section class="entries">'+(rows.join('') || '<p class="empty">'+empty+'</p>')+'</section>'+
+    '<section class="entries'+(A5.on ? ' a5list hand-'+A5.hand+' rows-'+A5.rows : '')+'">'+(rows.join('') || '<p class="empty">'+empty+'</p>')+'</section>'+
     (more ? '<div class="racts"><button class="btn" data-act="nmore">Show 10 more</button></div>' : '');
 }
 /* ---------- calculator: four functions and percent, like the one on test day ---------- */
@@ -1155,6 +1228,9 @@ app.addEventListener('click', function(e){
   if(a === 'calc'){ calc.open = !calc.open; render(); return; }
   if(a === 'written'){ var nn = state.notes.items[+b.getAttribute('data-k')]; if(nn){ nn[3] = nn[3] ? 0 : 1; touch('notes'); } render(); return; }
   if(a === 'nfilter'){ view.nf = b.getAttribute('data-f'); view.nshow = 10; render(); return; }
+  if(a === 'a5'){ A5.on = b.getAttribute('data-v') === 'a5'; a5Save(); render(); return; }
+  if(a === 'a5hand'){ A5.hand = b.getAttribute('data-v'); a5Save(); render(); return; }
+  if(a === 'a5rows'){ A5.rows = +b.getAttribute('data-v'); a5Save(); render(); return; }
   if(a === 'nmore'){ view.nshow = (view.nshow || 10) + 10; render(); return; }
   if(a === 'start'){ start(id, b.getAttribute('data-mode')); }
   else if(a === 'test'){ startTest(b.getAttribute('data-kind'), b.getAttribute('data-key')); }
@@ -1200,6 +1276,7 @@ document.addEventListener('keydown', function(e){
   else if(e.key === 'ArrowLeft'){ move(at.cur - 1); }
   else if(k === 'g'){ flag(); }
 });
+window.addEventListener('resize', function(){ if(view.name === 'home' && view.tab === 'notes' && A5.on) fitA5(); });
 document.addEventListener('visibilitychange', function(){ if(document.hidden && view.name === 'exam') saveLocal(view.examId); });
 ticker = setInterval(tick, 1000);
 render();
