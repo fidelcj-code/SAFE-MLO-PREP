@@ -1,5 +1,5 @@
 /* Offline support: the app shell is cached on first visit, shown from the cache, and refreshed in the background. */
-const VERSION = 'mlo-49b6dc0a59';
+const VERSION = 'mlo-91b0e81bdb';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
